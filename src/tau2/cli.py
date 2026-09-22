@@ -339,11 +339,12 @@ def add_run_args(parser):
     parser.add_argument(
         "--voice-synthesis-provider",
         type=str,
-        choices=["elevenlabs", "eesi"],
+        choices=["elevenlabs", "eesi", "openai"],
         default=DEFAULT_VOICE_SYNTHESIS_PROVIDER,
         help="TTS provider for the user simulator's speech in audio-native mode: "
-        "'elevenlabs' (ELEVENLABS_API_KEY, official voices) or 'eesi' "
-        f"(EESI_API_KEY, EESI built-in voices). Default is '{DEFAULT_VOICE_SYNTHESIS_PROVIDER}'.",
+        "'elevenlabs' (ELEVENLABS_API_KEY, official voices), 'eesi' "
+        "(EESI_API_KEY, EESI built-in voices) or 'openai' (OPENAI_API_KEY, "
+        f"gpt-4o-mini-tts with persona accents). Default is '{DEFAULT_VOICE_SYNTHESIS_PROVIDER}'.",
     )
 
     # Audio-native: Sample rates

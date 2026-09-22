@@ -7,6 +7,7 @@ from tau2.data_model.voice import ProviderConfig
 from tau2.utils.retry import tts_retry
 from tau2.voice.utils.eesi_utils import tts_eesi
 from tau2.voice.utils.elevenlabs_utils import tts_elevenlabs
+from tau2.voice.utils.openai_utils import tts_openai
 
 load_dotenv()
 
@@ -22,6 +23,8 @@ def synthesize_voice(
         audio_data = tts_elevenlabs(text=text, config=provider_config)
     elif provider == "eesi":
         audio_data = tts_eesi(text=text, config=provider_config)
+    elif provider == "openai":
+        audio_data = tts_openai(text=text, config=provider_config)
     else:
         raise ValueError(f"Unsupported synthesis provider: {provider}")
 

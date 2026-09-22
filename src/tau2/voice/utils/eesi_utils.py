@@ -19,6 +19,7 @@ from tau2.config import DEFAULT_EESI_BASE_URL, EESI_REQUEST_SOURCE
 from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
 from tau2.data_model.voice import EesiTTSConfig
 from tau2.voice.utils.audio_preprocessing import resample_audio
+from tau2.voice.utils.text_effects import strip_audio_tags
 
 EESI_API_KEY_ENV = "EESI_API_KEY"
 EESI_BASE_URL_ENV = "EESI_BASE_URL"
@@ -30,10 +31,6 @@ TTS_TIMEOUT_SECONDS = 120.0
 # nur-tts-v1 sometimes answers a very short input ("uh-huh", "mm-hmm") with a
 # 200 and a clip of zero frames; asking again usually returns speech.
 EMPTY_AUDIO_ATTEMPTS = 5
-
-# nur-tts-v1 has no audio tags: a pause is read as an ellipsis, the rest dropped.
-AUDIO_TAG_PATTERN = re.compile(r"\[(cough|sneeze|sniffle)\]", re.IGNORECASE)
-PAUSE_TAG_PATTERN = re.compile(r"\[pause\]", re.IGNORECASE)
 
 
 class EesiAPIError(Exception):
@@ -128,10 +125,8 @@ def tts_eesi(text: str, config: EesiTTSConfig) -> AudioData:
     Returns mono PCM16 at ``config.output_audio_format.sample_rate``, the rate
     the synthesis pipeline expects (the API answers at 24 kHz).
     """
-    spoken = AUDIO_TAG_PATTERN.sub("", PAUSE_TAG_PATTERN.sub("...", text)).strip()
-    if not re.search(r"\w", spoken):
-        # A vocal tic alone ("[cough]") has nothing for this model to say.
-        raise ValueError(f"No speakable text for EESI TTS in {text!r}")
+    # nur-tts-v1 has no audio tags.
+    spoken = strip_audio_tags(text)
 
     base_url = eesi_base_url(config.base_url)
     api_key = eesi_api_key(config.api_key)

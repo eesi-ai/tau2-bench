@@ -1,12 +1,13 @@
 # Copyright Sierra
 """Voice data models for synthesis, transcription, and audio effects."""
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, computed_field
 
-from tau2.config import DEFAULT_EESI_TTS_MODEL, DEFAULT_SEED
+from tau2.config import DEFAULT_EESI_TTS_MODEL, DEFAULT_OPENAI_TTS_MODEL, DEFAULT_SEED
 from tau2.data_model.audio import AudioEncoding, AudioFormat
 from tau2.data_model.audio_effects import (
     ChannelEffectsConfig,
@@ -14,7 +15,11 @@ from tau2.data_model.audio_effects import (
     SpeechEffectsConfig,
 )
 from tau2.data_model.persona import PersonaConfig
-from tau2.data_model.voice_personas import DEFAULT_PERSONA_NAME, get_voice_id
+from tau2.data_model.voice_personas import (
+    ALL_PERSONAS,
+    DEFAULT_PERSONA_NAME,
+    get_voice_id,
+)
 from tau2.voice_config import (
     BURST_NOISE_EVENTS_PER_MINUTE,
     DEFAULT_TRANSCRIPTION_MODEL,
@@ -128,8 +133,37 @@ class EesiTTSConfig(BaseModel):
         return DEFAULT_EESI_TTS_AUDIO_FORMAT
 
 
-ProviderConfig = Union[ElevenLabsTTSConfig, EesiTTSConfig]
-SynthesisProvider = Literal["elevenlabs", "eesi"]
+# ============================================================================
+# OpenAI TTS Models
+# ============================================================================
+
+# The synthesis pipeline runs at 16 kHz; the API's 24 kHz answer is resampled.
+DEFAULT_OPENAI_TTS_AUDIO_FORMAT = AudioFormat(
+    encoding=AudioEncoding.PCM_S16LE,
+    sample_rate=16000,
+)
+
+
+class OpenAITTSConfig(BaseModel):
+    """Configuration for OpenAI TTS (``POST /v1/audio/speech``).
+
+    ``api_key`` defaults to ``OPENAI_API_KEY``. ``voice_id`` is a built-in
+    voice name (``cedar``, ``marin``, ...). ``instructions`` describes how the
+    speaker sounds; personas set it with the voice.
+    """
+
+    model_id: str = Field(default=DEFAULT_OPENAI_TTS_MODEL)
+    voice_id: Optional[str] = Field(default=None)
+    instructions: Optional[str] = Field(default=None)
+    api_key: Optional[str] = Field(default=None)
+
+    @property
+    def output_audio_format(self) -> AudioFormat:
+        return DEFAULT_OPENAI_TTS_AUDIO_FORMAT
+
+
+ProviderConfig = Union[ElevenLabsTTSConfig, EesiTTSConfig, OpenAITTSConfig]
+SynthesisProvider = Literal["elevenlabs", "eesi", "openai"]
 
 
 # ============================================================================
@@ -157,9 +191,23 @@ class SynthesisConfig(BaseModel):
         """Default synthesis config for a TTS provider."""
         if provider == "eesi":
             return cls(provider="eesi", provider_config=EesiTTSConfig())
+        if provider == "openai":
+            return cls(provider="openai", provider_config=OpenAITTSConfig())
         if provider != "elevenlabs":
             raise ValueError(f"Unsupported voice synthesis provider: {provider}")
         return cls()
+
+    def persona_provider_config(self, persona_name: str) -> ProviderConfig:
+        """A copy of ``provider_config`` that speaks as the persona.
+
+        Sets the persona's voice for this provider and, for OpenAI, the
+        persona's voice description (age, accent) as ``instructions``.
+        """
+        config = deepcopy(self.provider_config)
+        config.voice_id = get_voice_id(persona_name, self.provider)
+        if isinstance(config, OpenAITTSConfig):
+            config.instructions = ALL_PERSONAS[persona_name].openai_instructions
+        return config
 
 
 class SynthesisResult(BaseModel):

@@ -676,7 +676,7 @@ class VoiceRunConfig(BaseRunConfig):
     voice_synthesis_provider: Annotated[
         SynthesisProvider,
         Field(
-            description="TTS provider for the user simulator's speech: 'elevenlabs' (official voices) or 'eesi' (EESI built-in voices)",
+            description="TTS provider for the user simulator's speech: 'elevenlabs' (official voices), 'eesi' (EESI built-in voices) or 'openai' (gpt-4o-mini-tts with persona accents)",
             default=DEFAULT_VOICE_SYNTHESIS_PROVIDER,
         ),
     ]

@@ -44,7 +44,7 @@ tau2 run --domain retail --audio-native --speech-complexity regular
 | `--audio-native-provider` | `openai` | Provider to use (see table above) |
 | `--audio-native-model` | per-provider | Override model |
 | `--speech-complexity` | `regular` | Speech complexity level |
-| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs` or `eesi` |
+| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs`, `eesi` or `openai` |
 | `--tick-duration` | `0.2` | Simulation timestep in seconds |
 | `--max-steps-seconds` | `600` | Maximum conversation duration |
 | `--verbose-logs` | — | Save audio files, LLM logs, and tick data |
@@ -105,7 +105,7 @@ The voice module has two main components:
 
 - **`audio_native/`** — Real-time provider adapters (OpenAI, Gemini, xAI). Each provider implements a `DiscreteTimeAdapter` that bridges the provider's streaming API to the tick-based simulation. See [audio_native/README.md](audio_native/README.md) for architecture details.
 
-- **`synthesis/`** — User simulator speech generation. Converts user text to audio via ElevenLabs or EESI TTS, applies audio effects (background noise, burst sounds, frame drops), and converts to telephony format (G.711 μ-law 8kHz).
+- **`synthesis/`** — User simulator speech generation. Converts user text to audio via ElevenLabs, EESI or OpenAI TTS, applies audio effects (background noise, burst sounds, frame drops), and converts to telephony format (G.711 μ-law 8kHz).
 
 - **`transcription/`** — Speech-to-text for evaluation. Supports Deepgram (nova-2, nova-3) and OpenAI (whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe).
 
@@ -138,18 +138,30 @@ tau2 run --domain airline --audio-native --audio-native-provider eesi \
 
 Each persona maps to an EESI built-in voice of the same gender (Orion, Nova, Atlas, Juniper), resolved by name because built-in ids differ between deployments. The built-ins are American or British, so `regular` keeps its noise and behaviour effects but not the personas' accents; set `TAU2_EESI_VOICE_<PERSONA_NAME_UPPER>` to an `ev_…` id or voice name (e.g. a clone) to supply one. `nur-tts-v1` has no audio tags: `[pause]` becomes an ellipsis and vocal tics are dropped. Results with EESI voices are not comparable to the official leaderboard.
 
+### OpenAI TTS
+
+`--voice-synthesis-provider openai` synthesizes the user with OpenAI's `gpt-4o-mini-tts`, using only `OPENAI_API_KEY`:
+
+```bash
+tau2 run --domain airline --audio-native --audio-native-provider eesi \
+  --voice-synthesis-provider openai --speech-complexity regular --num-tasks 1
+```
+
+Each persona maps to an OpenAI built-in voice of the same gender (Matt Delaney `cedar`, Lisa Brenner `marin`, Mildred Kaplan `sage`, Arjun Roy `ash`, Wei Lin `nova`, Mamadou Diallo `onyx`, Priya Patil `coral`). The persona's age and accent go to the model as voice instructions, so `regular` keeps its accents; a second instruction asks for spelled letters and digits one at a time, at a natural pace. Set `TAU2_OPENAI_VOICE_<PERSONA_NAME_UPPER>` to pick another voice. The 24 kHz answer is resampled to the pipeline's 16 kHz; audio tags are handled as for EESI. Results with OpenAI voices are not comparable to the official leaderboard.
+
 See the [Voice Persona Setup Guide](../../docs/voice-personas.md) for step-by-step instructions on creating matching voices with ElevenLabs Voice Design.
 
 ## Environment Variables
 
 | Variable | Used by |
 |----------|---------|
-| `OPENAI_API_KEY` | OpenAI Realtime provider |
+| `OPENAI_API_KEY` | OpenAI Realtime provider and OpenAI TTS |
 | `GOOGLE_API_KEY` | Gemini Live provider |
 | `XAI_API_KEY` | xAI Grok Voice provider |
 | `ELEVENLABS_API_KEY` | User simulator TTS (synthesis) |
 | `EESI_API_KEY` | EESI Nur Live provider and EESI TTS |
 | `EESI_BASE_URL` | EESI HTTP base (default `https://api.eesi.ai/v1`) |
 | `TAU2_EESI_VOICE_*` | EESI voice overrides per persona |
+| `TAU2_OPENAI_VOICE_*` | OpenAI TTS voice overrides per persona |
 | `DEEPGRAM_API_KEY` | Transcription (Deepgram nova-2, nova-3) |
 | `TAU2_VOICE_ID_*` | Custom voice ID overrides (see [Voice Persona Setup](../../docs/voice-personas.md)) |

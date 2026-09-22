@@ -71,7 +71,7 @@ tau2 run \
 | `--tick-duration` | `0.2` | Tick duration in seconds (simulation timestep) |
 | `--max-steps-seconds` | `600` | Maximum conversation duration in seconds |
 | `--speech-complexity` | `regular` | Speech complexity: `control`, `regular`, or ablation variants (`control_audio`, `control_accents`, `control_behavior`, `control_audio_accents`, `control_audio_behavior`, `control_accents_behavior`) |
-| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs` or `eesi` (EESI built-in voices) |
+| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs`, `eesi` (EESI built-in voices) or `openai` (`gpt-4o-mini-tts`, persona accents via voice instructions) |
 | `--pcm-sample-rate` | `16000` | User simulator PCM synthesis rate |
 | `--telephony-rate` | `8000` | API/agent telephony rate |
 
@@ -104,6 +104,10 @@ tau2 run --domain retail --audio-native --audio-native-provider gemini \
 # EESI Nur Live as the agent, EESI TTS for the user (EESI_API_KEY, EESI_BASE_URL)
 tau2 run --domain airline --audio-native --audio-native-provider eesi \
   --voice-synthesis-provider eesi --speech-complexity control --num-tasks 1
+
+# OpenAI TTS for the user when there is no ElevenLabs key (OPENAI_API_KEY)
+tau2 run --domain airline --audio-native --audio-native-provider eesi \
+  --voice-synthesis-provider openai --speech-complexity regular --num-tasks 1
 
 # Audio native with hallucination retries disabled
 tau2 run --domain retail --audio-native --hallucination-retries 0 --num-tasks 1

@@ -149,6 +149,9 @@ DEFAULT_OPENAI_VAD_THRESHOLD = DEFAULT_OPENAI_VAD_THRESHOLD_DEFAULT
 DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 DEFAULT_OPENAI_TRANSCRIPTION_MODEL = "gpt-4o-transcribe"  # overridable
 DEFAULT_WHISPER_MODEL = "whisper-1"  # fixed
+# User simulator TTS (--voice-synthesis-provider openai); needs a model that
+# takes voice instructions, which carry each persona's age and accent.
+DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts"  # overridable
 
 # =============================================================================
 # GEMINI PROVIDER (overridable model/voice, fixed API constants)

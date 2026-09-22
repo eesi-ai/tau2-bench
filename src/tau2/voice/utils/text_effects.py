@@ -5,11 +5,30 @@ These functions modify text before TTS synthesis.
 """
 
 import random
+import re
 
 from loguru import logger
 
 from tau2.data_model.audio_effects import UserSpeechInsert
 from tau2.voice_config import MIN_WORDS_FOR_VOCAL_TICS
+
+# TTS models without audio tags (EESI, OpenAI) read a pause as an ellipsis and
+# would say a vocal tic as a word, so tics are dropped.
+AUDIO_TAG_PATTERN = re.compile(r"\[(cough|sneeze|sniffle)\]", re.IGNORECASE)
+PAUSE_TAG_PATTERN = re.compile(r"\[pause\]", re.IGNORECASE)
+
+
+def strip_audio_tags(text: str) -> str:
+    """Text for a TTS model that has no audio tags.
+
+    ``[pause]`` becomes an ellipsis; ``[cough]``, ``[sneeze]`` and
+    ``[sniffle]`` are dropped. Raises ``ValueError`` when nothing speakable is
+    left: a vocal tic alone ("[cough]") has nothing for such a model to say.
+    """
+    spoken = AUDIO_TAG_PATTERN.sub("", PAUSE_TAG_PATTERN.sub("...", text)).strip()
+    if not re.search(r"\w", spoken):
+        raise ValueError(f"No speakable text in {text!r}")
+    return spoken
 
 
 def insert_speech_text(

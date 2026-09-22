@@ -3,7 +3,6 @@
 
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
@@ -13,7 +12,6 @@ from tau2.config import DEFAULT_TELEPHONY_RATE
 from tau2.data_model.audio import AudioData
 from tau2.data_model.audio_effects import UserSpeechInsert
 from tau2.data_model.voice import SynthesisConfig
-from tau2.data_model.voice_personas import get_voice_id
 from tau2.voice.synthesis.audio_effects.effects import apply_constant_muffling
 from tau2.voice.synthesis.synthesize import synthesize_voice
 from tau2.voice.utils.audio_preprocessing import resample_audio
@@ -124,13 +122,11 @@ def create_streaming_audio_generators(
     out_of_turn_items = speech_config.get_out_of_turn_speech_inserts()
 
     if out_of_turn_items:
-        voice_id = get_voice_id(persona_name, synthesis_config.provider)
-        provider_config_with_voice = deepcopy(synthesis_config.provider_config)
-        provider_config_with_voice.voice_id = voice_id
+        provider_config = synthesis_config.persona_provider_config(persona_name)
         out_of_turn_speech_generator = OutOfTurnSpeechGenerator(
-            voice_id=voice_id,
+            voice_id=provider_config.voice_id,
             provider=synthesis_config.provider,
-            provider_config=provider_config_with_voice,
+            provider_config=provider_config,
             target_sample_rate=sample_rate,
         )
         out_of_turn_speech_generator.generate_all(items=out_of_turn_items)
