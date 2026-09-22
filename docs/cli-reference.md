@@ -66,11 +66,12 @@ tau2 run \
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--audio-native` | `false` | Enable audio native mode |
-| `--audio-native-provider` | `openai` | Provider: `openai`, `gemini`, `xai` |
+| `--audio-native-provider` | `openai` | Provider: `openai`, `openai_live`, `gemini`, `xai`, `nova`, `qwen`, `eesi`, `livekit` |
 | `--audio-native-model` | *(per-provider)* | Model to use (defaults to provider-specific model if not set) |
 | `--tick-duration` | `0.2` | Tick duration in seconds (simulation timestep) |
 | `--max-steps-seconds` | `600` | Maximum conversation duration in seconds |
 | `--speech-complexity` | `regular` | Speech complexity: `control`, `regular`, or ablation variants (`control_audio`, `control_accents`, `control_behavior`, `control_audio_accents`, `control_audio_behavior`, `control_accents_behavior`) |
+| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs` or `eesi` (EESI built-in voices) |
 | `--pcm-sample-rate` | `16000` | User simulator PCM synthesis rate |
 | `--telephony-rate` | `8000` | API/agent telephony rate |
 
@@ -99,6 +100,10 @@ tau2 run --domain retail --audio-native --num-tasks 1 --verbose-logs
 tau2 run --domain retail --audio-native --audio-native-provider gemini \
   --tick-duration 0.2 --max-steps-seconds 240 --speech-complexity control \
   --verbose-logs --save-to my_audio_native_run
+
+# EESI Nur Live as the agent, EESI TTS for the user (EESI_API_KEY, EESI_BASE_URL)
+tau2 run --domain airline --audio-native --audio-native-provider eesi \
+  --voice-synthesis-provider eesi --speech-complexity control --num-tasks 1
 
 # Audio native with hallucination retries disabled
 tau2 run --domain retail --audio-native --hallucination-retries 0 --num-tasks 1

@@ -87,6 +87,13 @@ PROVIDERS = [
         ),
     ),
     pytest.param(
+        "eesi",
+        marks=pytest.mark.skipif(
+            not os.environ.get("EESI_API_KEY"),
+            reason="EESI_API_KEY not set",
+        ),
+    ),
+    pytest.param(
         "gemini",
         marks=pytest.mark.skipif(
             not (

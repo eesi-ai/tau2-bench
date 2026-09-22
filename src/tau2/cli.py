@@ -28,6 +28,7 @@ from tau2.config import (
     DEFAULT_TELEPHONY_RATE,
     DEFAULT_TICK_DURATION_SECONDS,
     DEFAULT_USER_IMPLEMENTATION,
+    DEFAULT_VOICE_SYNTHESIS_PROVIDER,
     DEFAULT_WAIT_TO_RESPOND_THRESHOLD_OTHER_SECONDS,
     DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS,
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
@@ -257,7 +258,16 @@ def add_run_args(parser):
     parser.add_argument(
         "--audio-native-provider",
         type=str,
-        choices=["openai", "openai_live", "gemini", "xai", "nova", "qwen", "livekit"],
+        choices=[
+            "openai",
+            "openai_live",
+            "gemini",
+            "xai",
+            "nova",
+            "qwen",
+            "eesi",
+            "livekit",
+        ],
         default=DEFAULT_AUDIO_NATIVE_PROVIDER,
         help=f"Audio native API provider. Default is '{DEFAULT_AUDIO_NATIVE_PROVIDER}'.",
     )
@@ -325,6 +335,15 @@ def add_run_args(parser):
         ],
         default=DEFAULT_SPEECH_COMPLEXITY,
         help=f"Speech complexity level for audio effects. Default is '{DEFAULT_SPEECH_COMPLEXITY}'.",
+    )
+    parser.add_argument(
+        "--voice-synthesis-provider",
+        type=str,
+        choices=["elevenlabs", "eesi"],
+        default=DEFAULT_VOICE_SYNTHESIS_PROVIDER,
+        help="TTS provider for the user simulator's speech in audio-native mode: "
+        "'elevenlabs' (ELEVENLABS_API_KEY, official voices) or 'eesi' "
+        f"(EESI_API_KEY, EESI built-in voices). Default is '{DEFAULT_VOICE_SYNTHESIS_PROVIDER}'.",
     )
 
     # Audio-native: Sample rates
@@ -702,6 +721,7 @@ def main():
                 **shared_kwargs,
                 audio_native_config=audio_native_config,
                 speech_complexity=args.speech_complexity,
+                voice_synthesis_provider=args.voice_synthesis_provider,
                 audio_debug=getattr(args, "audio_debug", False),
                 audio_taps=getattr(args, "audio_taps", False),
             )

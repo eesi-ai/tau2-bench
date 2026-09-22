@@ -13,6 +13,7 @@ tau2 run --domain retail --audio-native --num-tasks 1 --verbose-logs
 | OpenAI Realtime | `--audio-native-provider openai` | `OPENAI_API_KEY` |
 | Google Gemini Live | `--audio-native-provider gemini` | `GOOGLE_API_KEY` |
 | xAI Grok Voice | `--audio-native-provider xai` | `XAI_API_KEY` |
+| EESI Nur Live | `--audio-native-provider eesi` | `EESI_API_KEY` (`EESI_BASE_URL` for a non-production environment) |
 
 The default provider is `openai`. Use `--audio-native-model` to override the default model for a provider.
 
@@ -43,6 +44,7 @@ tau2 run --domain retail --audio-native --speech-complexity regular
 | `--audio-native-provider` | `openai` | Provider to use (see table above) |
 | `--audio-native-model` | per-provider | Override model |
 | `--speech-complexity` | `regular` | Speech complexity level |
+| `--voice-synthesis-provider` | `elevenlabs` | User simulator TTS: `elevenlabs` or `eesi` |
 | `--tick-duration` | `0.2` | Simulation timestep in seconds |
 | `--max-steps-seconds` | `600` | Maximum conversation duration |
 | `--verbose-logs` | — | Save audio files, LLM logs, and tick data |
@@ -103,7 +105,7 @@ The voice module has two main components:
 
 - **`audio_native/`** — Real-time provider adapters (OpenAI, Gemini, xAI). Each provider implements a `DiscreteTimeAdapter` that bridges the provider's streaming API to the tick-based simulation. See [audio_native/README.md](audio_native/README.md) for architecture details.
 
-- **`synthesis/`** — User simulator speech generation. Converts user text to audio via ElevenLabs TTS, applies audio effects (background noise, burst sounds, frame drops), and converts to telephony format (G.711 μ-law 8kHz).
+- **`synthesis/`** — User simulator speech generation. Converts user text to audio via ElevenLabs or EESI TTS, applies audio effects (background noise, burst sounds, frame drops), and converts to telephony format (G.711 μ-law 8kHz).
 
 - **`transcription/`** — Speech-to-text for evaluation. Supports Deepgram (nova-2, nova-3) and OpenAI (whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe).
 
@@ -124,6 +126,18 @@ TAU2_VOICE_ID_LISA_BRENNER=your_voice_id_here
 
 For a minimal setup, create just the two control personas and use `--speech-complexity control`.
 
+### EESI TTS
+
+`--voice-synthesis-provider eesi` synthesizes the user with EESI's `nur-tts-v1` instead, so a run needs no ElevenLabs account:
+
+```bash
+EESI_API_KEY=... EESI_BASE_URL=https://api.dev.eesi.ai/v1 \
+tau2 run --domain airline --audio-native --audio-native-provider eesi \
+  --voice-synthesis-provider eesi --speech-complexity control --num-tasks 1
+```
+
+Each persona maps to an EESI built-in voice of the same gender (Orion, Nova, Atlas, Juniper), resolved by name because built-in ids differ between deployments. The built-ins are American or British, so `regular` keeps its noise and behaviour effects but not the personas' accents; set `TAU2_EESI_VOICE_<PERSONA_NAME_UPPER>` to an `ev_…` id or voice name (e.g. a clone) to supply one. `nur-tts-v1` has no audio tags: `[pause]` becomes an ellipsis and vocal tics are dropped. Results with EESI voices are not comparable to the official leaderboard.
+
 See the [Voice Persona Setup Guide](../../docs/voice-personas.md) for step-by-step instructions on creating matching voices with ElevenLabs Voice Design.
 
 ## Environment Variables
@@ -134,5 +148,8 @@ See the [Voice Persona Setup Guide](../../docs/voice-personas.md) for step-by-st
 | `GOOGLE_API_KEY` | Gemini Live provider |
 | `XAI_API_KEY` | xAI Grok Voice provider |
 | `ELEVENLABS_API_KEY` | User simulator TTS (synthesis) |
+| `EESI_API_KEY` | EESI Nur Live provider and EESI TTS |
+| `EESI_BASE_URL` | EESI HTTP base (default `https://api.eesi.ai/v1`) |
+| `TAU2_EESI_VOICE_*` | EESI voice overrides per persona |
 | `DEEPGRAM_API_KEY` | Transcription (Deepgram nova-2, nova-3) |
 | `TAU2_VOICE_ID_*` | Custom voice ID overrides (see [Voice Persona Setup](../../docs/voice-personas.md)) |

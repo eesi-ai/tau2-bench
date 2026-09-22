@@ -129,6 +129,8 @@ PRICING: Dict[Tuple[str, str], Rates] = {
     ("xai", "xai-realtime"): Rates(per_audio_input_minute=0.05),
     ("xai", "grok-voice-think-fast-1.0"): Rates(per_audio_input_minute=0.05),
     ("xai", "grok-voice-think-fast-2.0"): Rates(per_audio_input_minute=0.08),
+    # --- EESI (verified: docs.eesi.ai/develop/pricing-and-limits, per connected minute) ---
+    ("eesi", "nur-live-v1"): Rates(per_audio_input_minute=0.001),
     # --- Cascaded legs (verified: deepgram.com/pricing, elevenlabs.io/pricing,
     # developers.openai.com, platform.claude.com) ---
     ("deepgram", "nova-3"): Rates(per_audio_input_minute=0.0048),  # streaming, en

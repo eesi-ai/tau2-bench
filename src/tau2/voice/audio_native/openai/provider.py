@@ -441,6 +441,11 @@ class OpenAIRealtimeProvider:
             f"audio_end_ms={audio_end_ms}"
         )
 
+    @staticmethod
+    def parse_event(data: dict) -> BaseRealtimeEvent:
+        """Parse one server frame. OpenAI-compatible providers may extend it."""
+        return parse_realtime_event(data)
+
     async def receive_events(self) -> AsyncGenerator[BaseRealtimeEvent, None]:
         """Async generator yielding parsed events from the WebSocket.
 
@@ -454,7 +459,7 @@ class OpenAIRealtimeProvider:
             try:
                 raw_message = await asyncio.wait_for(self.ws.recv(), timeout=0.01)
                 data = json.loads(raw_message)
-                event = parse_realtime_event(data)
+                event = self.parse_event(data)
                 yield event
 
             except asyncio.TimeoutError:

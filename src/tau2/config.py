@@ -99,7 +99,7 @@ DEFAULT_SPEECH_COMPLEXITY = "regular"  # overridable: "control", "regular"
 DEFAULT_AUDIO_NATIVE_AGENT_IMPLEMENTATION = "discrete_time_audio_native_agent"
 DEFAULT_AUDIO_NATIVE_USER_IMPLEMENTATION = "voice_streaming_user_simulator"
 DEFAULT_AUDIO_NATIVE_PROVIDER = (
-    "openai"  # overridable: openai, openai_live, gemini, xai, nova, qwen, livekit
+    "openai"  # overridable: openai, openai_live, gemini, xai, nova, qwen, eesi, livekit
 )
 DEFAULT_TICK_DURATION_SECONDS = 0.20  # overridable
 DEFAULT_MAX_STEPS_SECONDS = 1200  # overridable
@@ -203,6 +203,17 @@ DEFAULT_QWEN_INPUT_SAMPLE_RATE = 16000  # fixed, API-defined
 DEFAULT_QWEN_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 
 # =============================================================================
+# EESI PROVIDER (overridable model, fixed API constants)
+# =============================================================================
+# Nur Live speaks the OpenAI Realtime GA protocol at <base>/realtime and takes
+# G.711 μ-law at 8 kHz natively. EESI_API_KEY and EESI_BASE_URL (the HTTP base,
+# e.g. https://api.dev.eesi.ai/v1) select the key and the environment.
+DEFAULT_EESI_BASE_URL = "https://api.eesi.ai/v1"  # overridable via EESI_BASE_URL
+DEFAULT_EESI_REALTIME_MODEL = "nur-live-v1"  # overridable
+DEFAULT_EESI_TTS_MODEL = "nur-tts-v1"  # overridable
+EESI_REQUEST_SOURCE = "tau2-bench"  # fixed, labels sessions and TTS history rows
+
+# =============================================================================
 # PROVIDER REGISTRY (derived from above)
 # =============================================================================
 DEFAULT_AUDIO_NATIVE_MODELS = {
@@ -212,6 +223,7 @@ DEFAULT_AUDIO_NATIVE_MODELS = {
     "xai": DEFAULT_XAI_MODEL,
     "nova": DEFAULT_NOVA_MODEL,
     "qwen": DEFAULT_QWEN_MODEL,
+    "eesi": DEFAULT_EESI_REALTIME_MODEL,
     "livekit": "dummy",
 }
 
@@ -222,6 +234,7 @@ DEFAULT_AUDIO_NATIVE_REASONING_EFFORT: dict[str, str | None] = {
     "xai": "high",
     "nova": None,
     "qwen": None,
+    "eesi": None,
     "livekit": None,
 }
 
@@ -232,6 +245,7 @@ AUDIO_NATIVE_PROVIDER_TYPES = {
     "xai": "audio_native",
     "nova": "audio_native",
     "qwen": "audio_native",
+    "eesi": "audio_native",
     "livekit": "cascaded",
 }
 

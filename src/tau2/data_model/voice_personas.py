@@ -17,6 +17,11 @@ runtime (no code changes needed)::
 
 See ``docs/voice-personas.md`` for a step-by-step guide to creating
 matching voices with the ElevenLabs Voice Design tool.
+
+With EESI TTS (``--voice-synthesis-provider eesi``) each persona uses an
+EESI built-in voice of the same gender instead. Built-ins are American or
+British, so the regular personas' accents are not reproduced; point
+``TAU2_EESI_VOICE_<PERSONA_NAME_UPPER>`` at a cloned voice to add one.
 """
 
 import logging
@@ -53,10 +58,22 @@ def _resolve_voice_id(persona_name: str, default_id: str) -> str:
     return default_id
 
 
+def _resolve_eesi_voice(persona_name: str, default_voice: str) -> str:
+    """Resolve the EESI voice from env variable, falling back to the default.
+
+    Defaults name EESI built-in voices (ids differ between deployments, so
+    the name is looked up at synthesis time). Env variable pattern:
+    ``TAU2_EESI_VOICE_<PERSONA_NAME_UPPER>``, holding an ``ev_…`` id or a
+    voice name, e.g. a clone that carries the persona's accent.
+    """
+    return os.environ.get(f"TAU2_EESI_VOICE_{persona_name.upper()}", default_voice)
+
+
 class VoicePersona(BaseModel):
     """Definition of a voice persona for user simulation."""
 
     elevenlabs_voice_id: str
+    eesi_voice: str
     name: str
     display_name: str
     short_description: str
@@ -66,6 +83,7 @@ class VoicePersona(BaseModel):
 
 MATT_DELANEY = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("matt_delaney", "EZfwTIuZL0WWIVnjSgTF"),
+    eesi_voice=_resolve_eesi_voice("matt_delaney", "Orion"),
     name="matt_delaney",
     display_name="Matt Delaney",
     short_description="Middle-aged white man from the American Midwest, calm and respectful",
@@ -80,6 +98,7 @@ You rarely use formal or stiff language ("considerable," "retrieve," "representa
 
 LISA_BRENNER = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("lisa_brenner", "avQFHuQU7IjJf0u5MMBq"),
+    eesi_voice=_resolve_eesi_voice("lisa_brenner", "Nova"),
     name="lisa_brenner",
     display_name="Lisa Brenner",
     short_description="White woman in her late 40s from a suburban area, tense and impatient",
@@ -95,6 +114,7 @@ You never sound relaxed or use slow, reflective speech. You never thank the agen
 
 MILDRED_KAPLAN = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("mildred_kaplan", "oNqrZRHHLWtHYsVNkRqe"),
+    eesi_voice=_resolve_eesi_voice("mildred_kaplan", "Juniper"),
     name="mildred_kaplan",
     display_name="Mildred Kaplan",
     short_description="Elderly white woman in her early 80s, needs help with technology",
@@ -104,6 +124,7 @@ MILDRED_KAPLAN = VoicePersona(
 
 ARJUN_ROY = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("arjun_roy", "m1hMce9ingsjyIjkshRv"),
+    eesi_voice=_resolve_eesi_voice("arjun_roy", "Atlas"),
     name="arjun_roy",
     display_name="Arjun Roy",
     short_description="Bengali man from Dhaka in his mid-30s, calm and direct",
@@ -113,6 +134,7 @@ ARJUN_ROY = VoicePersona(
 
 WEI_LIN = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("wei_lin", "GQ2S7ULnVjrOALFRfnsh"),
+    eesi_voice=_resolve_eesi_voice("wei_lin", "Nova"),
     name="wei_lin",
     display_name="Wei Lin",
     short_description="Chinese woman from Sichuan in her late 20s, upbeat and matter-of-fact",
@@ -122,6 +144,7 @@ WEI_LIN = VoicePersona(
 
 MAMADOU_DIALLO = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("mamadou_diallo", "ET3963lBcRmodt3ZaTBS"),
+    eesi_voice=_resolve_eesi_voice("mamadou_diallo", "Orion"),
     name="mamadou_diallo",
     display_name="Mamadou Diallo",
     short_description="Senegalese man in his mid-30s, hurried with French accent",
@@ -131,6 +154,7 @@ MAMADOU_DIALLO = VoicePersona(
 
 PRIYA_PATIL = VoicePersona(
     elevenlabs_voice_id=_resolve_voice_id("priya_patil", "mnHhNJntmsPxJsZvYVM7"),
+    eesi_voice=_resolve_eesi_voice("priya_patil", "Juniper"),
     name="priya_patil",
     display_name="Priya Patil",
     short_description="Maharashtrian woman in her early 30s, hurried and focused",
@@ -183,13 +207,19 @@ def warn_if_non_official_voices() -> None:
         )
 
 
-def get_elevenlabs_voice_id(persona_name: str) -> str:
-    """Get the ElevenLabs voice ID for a persona."""
+def get_voice_id(persona_name: str, provider: str = "elevenlabs") -> str:
+    """Get a persona's voice for a TTS provider ("elevenlabs" or "eesi")."""
     if persona_name not in ALL_PERSONAS:
         raise KeyError(
             f"Unknown persona: '{persona_name}'. Available: {ALL_PERSONA_NAMES}"
         )
-    return ALL_PERSONAS[persona_name].elevenlabs_voice_id
+    persona = ALL_PERSONAS[persona_name]
+    return persona.eesi_voice if provider == "eesi" else persona.elevenlabs_voice_id
+
+
+def get_elevenlabs_voice_id(persona_name: str) -> str:
+    """Get the ElevenLabs voice ID for a persona."""
+    return get_voice_id(persona_name, "elevenlabs")
 
 
 def get_persona_name_by_voice_id(voice_id: str) -> Optional[str]:

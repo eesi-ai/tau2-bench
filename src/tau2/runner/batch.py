@@ -494,7 +494,7 @@ def make_voice_run_settings(
         return None, None
     user_voice_settings = VoiceSettings(
         transcription_config=None,
-        synthesis_config=SynthesisConfig(),
+        synthesis_config=SynthesisConfig.for_provider(config.voice_synthesis_provider),
     )
     complexity_config = COMPLEXITY_CONFIGS[config.speech_complexity]
     user_persona_config = PersonaConfig(

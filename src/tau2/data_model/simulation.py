@@ -44,6 +44,7 @@ from tau2.config import (
     DEFAULT_TEXT_STREAMING_CONFIG,
     DEFAULT_TICK_DURATION_SECONDS,
     DEFAULT_USE_LLM_BACKCHANNEL,
+    DEFAULT_VOICE_SYNTHESIS_PROVIDER,
     DEFAULT_WAIT_TO_RESPOND_THRESHOLD_OTHER_SECONDS,
     DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS,
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
@@ -54,7 +55,12 @@ from tau2.data_model.message import Message, Tick
 from tau2.data_model.persona import PersonaConfig
 from tau2.data_model.tasks import Action, EnvAssertion, RewardType, Task
 from tau2.data_model.usage import SessionUsage
-from tau2.data_model.voice import SpeechComplexity, SpeechEnvironment, VoiceSettings
+from tau2.data_model.voice import (
+    SpeechComplexity,
+    SpeechEnvironment,
+    SynthesisProvider,
+    VoiceSettings,
+)
 from tau2.environment.environment import EnvironmentInfo
 from tau2.environment.toolkit import ToolType
 from tau2.orchestrator.modes import CommunicationMode
@@ -73,10 +79,10 @@ class AudioNativeConfig(BaseModel):
 
     # Provider selection
     provider: Literal[
-        "openai", "openai_live", "gemini", "xai", "nova", "qwen", "livekit"
+        "openai", "openai_live", "gemini", "xai", "nova", "qwen", "eesi", "livekit"
     ] = Field(
         default=DEFAULT_AUDIO_NATIVE_PROVIDER,
-        description="Audio native API provider: 'openai' (OpenAI Realtime), 'openai_live' (OpenAI Live), 'gemini' (Gemini Live), 'xai' (xAI Grok Voice Agent), 'nova' (Amazon Nova Sonic), 'qwen' (Alibaba Qwen Omni), or 'livekit' (LiveKit cascaded STT→LLM→TTS)",
+        description="Audio native API provider: 'openai' (OpenAI Realtime), 'openai_live' (OpenAI Live), 'gemini' (Gemini Live), 'xai' (xAI Grok Voice Agent), 'nova' (Amazon Nova Sonic), 'qwen' (Alibaba Qwen Omni), 'eesi' (EESI Nur Live), or 'livekit' (LiveKit cascaded STT→LLM→TTS)",
     )
 
     # Cascaded config (for livekit provider)
@@ -665,6 +671,13 @@ class VoiceRunConfig(BaseRunConfig):
         Field(
             description="Speech environment complexity level: 'control' (clean speech, no effects), 'regular' (realistic with background noise and effects), plus ablation variants",
             default="regular",
+        ),
+    ]
+    voice_synthesis_provider: Annotated[
+        SynthesisProvider,
+        Field(
+            description="TTS provider for the user simulator's speech: 'elevenlabs' (official voices) or 'eesi' (EESI built-in voices)",
+            default=DEFAULT_VOICE_SYNTHESIS_PROVIDER,
         ),
     ]
     agent_voice_settings: Annotated[

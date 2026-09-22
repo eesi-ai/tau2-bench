@@ -258,7 +258,9 @@ def build_voice_user(
     )
 
     # Set speech environment
-    speech_environment = sampled_voice_config.to_speech_environment(task_seed)
+    speech_environment = sampled_voice_config.to_speech_environment(
+        task_seed, provider=task_voice_settings.synthesis_config.provider
+    )
     task_voice_settings.speech_environment = speech_environment
 
     # Use provided persona config or fall back to sampled config

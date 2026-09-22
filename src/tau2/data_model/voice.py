@@ -2,11 +2,11 @@
 """Voice data models for synthesis, transcription, and audio effects."""
 
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, computed_field
 
-from tau2.config import DEFAULT_SEED
+from tau2.config import DEFAULT_EESI_TTS_MODEL, DEFAULT_SEED
 from tau2.data_model.audio import AudioEncoding, AudioFormat
 from tau2.data_model.audio_effects import (
     ChannelEffectsConfig,
@@ -14,7 +14,7 @@ from tau2.data_model.audio_effects import (
     SpeechEffectsConfig,
 )
 from tau2.data_model.persona import PersonaConfig
-from tau2.data_model.voice_personas import DEFAULT_PERSONA_NAME, get_elevenlabs_voice_id
+from tau2.data_model.voice_personas import DEFAULT_PERSONA_NAME, get_voice_id
 from tau2.voice_config import (
     BURST_NOISE_EVENTS_PER_MINUTE,
     DEFAULT_TRANSCRIPTION_MODEL,
@@ -98,7 +98,38 @@ class ElevenLabsTTSConfig(BaseModel):
     seed: Optional[int] = Field(default=None)
 
 
-ProviderConfig = ElevenLabsTTSConfig
+# ============================================================================
+# EESI TTS Models
+# ============================================================================
+
+# The synthesis pipeline runs at 16 kHz; the API's 24 kHz answer is resampled.
+DEFAULT_EESI_TTS_AUDIO_FORMAT = AudioFormat(
+    encoding=AudioEncoding.PCM_S16LE,
+    sample_rate=16000,
+)
+
+
+class EesiTTSConfig(BaseModel):
+    """Configuration for EESI TTS (``POST /v1/audio/speech``).
+
+    ``api_key`` and ``base_url`` default to ``EESI_API_KEY`` and
+    ``EESI_BASE_URL``. ``voice_id`` is an ``ev_…`` id or a voice name from
+    ``GET /v1/voices``; personas name built-in voices.
+    """
+
+    model_id: str = Field(default=DEFAULT_EESI_TTS_MODEL)
+    voice_id: Optional[str] = Field(default=None)
+    api_key: Optional[str] = Field(default=None)
+    base_url: Optional[str] = Field(default=None)
+    language: Optional[str] = Field(default="en")
+
+    @property
+    def output_audio_format(self) -> AudioFormat:
+        return DEFAULT_EESI_TTS_AUDIO_FORMAT
+
+
+ProviderConfig = Union[ElevenLabsTTSConfig, EesiTTSConfig]
+SynthesisProvider = Literal["elevenlabs", "eesi"]
 
 
 # ============================================================================
@@ -120,6 +151,15 @@ class SynthesisConfig(BaseModel):
     speech_effects_config: SpeechEffectsConfig = Field(
         default_factory=SpeechEffectsConfig
     )
+
+    @classmethod
+    def for_provider(cls, provider: SynthesisProvider) -> "SynthesisConfig":
+        """Default synthesis config for a TTS provider."""
+        if provider == "eesi":
+            return cls(provider="eesi", provider_config=EesiTTSConfig())
+        if provider != "elevenlabs":
+            raise ValueError(f"Unsupported voice synthesis provider: {provider}")
+        return cls()
 
 
 class SynthesisResult(BaseModel):
@@ -269,12 +309,19 @@ class SampledVoiceConfig(BaseModel):
     # Complexity level (stored for reference)
     complexity: SpeechComplexity = Field(description="The complexity level used")
 
-    def to_speech_environment(self, seed: int) -> "SpeechEnvironment":
-        """Create a SpeechEnvironment from this sampled config."""
+    def to_speech_environment(
+        self, seed: int, provider: str = "elevenlabs"
+    ) -> "SpeechEnvironment":
+        """Create a SpeechEnvironment from this sampled config.
+
+        Args:
+            seed: Voice seed for this task.
+            provider: TTS provider, which decides the persona's voice ID.
+        """
         return SpeechEnvironment(
             voice_seed=seed,
             persona_name=self.persona_name,
-            voice_id=get_elevenlabs_voice_id(self.persona_name),
+            voice_id=get_voice_id(self.persona_name, provider),
             background_noise_file=self.background_noise_file,
             burst_noise_files=self.burst_noise_files,
             environment=self.environment,

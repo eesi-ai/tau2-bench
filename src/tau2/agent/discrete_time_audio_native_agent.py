@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, Union
 from loguru import logger
 
 if TYPE_CHECKING:
+    from tau2.voice.audio_native.eesi.provider import EesiVADConfig
     from tau2.voice.audio_native.gemini.provider import GeminiVADConfig
     from tau2.voice.audio_native.livekit.config import CascadedConfig
     from tau2.voice.audio_native.nova.provider import NovaVADConfig
@@ -84,7 +85,7 @@ from tau2.voice.pricing import compute_tick_cost
 
 # Provider type alias
 AudioNativeProvider = Literal[
-    "openai", "openai_live", "gemini", "xai", "nova", "qwen", "livekit"
+    "openai", "openai_live", "gemini", "xai", "nova", "qwen", "eesi", "livekit"
 ]
 
 # VAD config union type (string annotations for lazy resolution)
@@ -94,6 +95,7 @@ VADConfig = Union[
     "XAIVADConfig",
     "NovaVADConfig",
     "QwenVADConfig",
+    "EesiVADConfig",
 ]
 
 AUDIO_NATIVE_VOICE_INSTRUCTION = """
@@ -298,6 +300,10 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
             from tau2.voice.audio_native.qwen.provider import QwenVADConfig
 
             self.vad_config = QwenVADConfig()
+        elif provider == "eesi":
+            from tau2.voice.audio_native.eesi.provider import EesiVADConfig
+
+            self.vad_config = EesiVADConfig()
         elif provider == "livekit":
             from tau2.voice.audio_native.livekit.discrete_time_adapter import (
                 LiveKitVADConfig,
