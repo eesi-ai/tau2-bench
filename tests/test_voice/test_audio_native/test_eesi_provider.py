@@ -236,6 +236,46 @@ def test_barge_in_still_truncates_the_reply():
     provider.truncate_item.assert_awaited_once()
 
 
+def test_truncate_reports_the_whole_reply_played_not_one_tick():
+    """Upstream sends one tick (200 ms) as audio_end_ms on every barge-in.
+    Nur keeps only the heard part of a cut reply, so that would leave a word
+    of a reply the caller heard for a second and a half."""
+    adapter, provider = make_adapter()
+    # Two full ticks of item_1 already played: 3200 bytes = 400 ms at 8 kHz.
+    adapter._played_bytes["item_1"] = 3200
+    tick = make_tick()
+
+    async def run():
+        await adapter._process_event(tick, agent_audio(1600))
+        # Barge-in 100 ms into this tick: 800 more bytes played.
+        await adapter._process_event(
+            tick,
+            SpeechStartedEvent(
+                type="input_audio_buffer.speech_started", audio_start_ms=1100
+            ),
+        )
+
+    asyncio.run(run())
+
+    provider.truncate_item.assert_awaited_once()
+    assert provider.truncate_item.await_args.kwargs["audio_end_ms"] == 500
+
+
+def test_played_audio_is_counted_per_reply_across_ticks():
+    tick = make_tick()
+    tick.agent_audio_chunks = [(b"\x10" * 600, "item_1"), (b"\x10" * 1000, "item_2")]
+    assert DiscreteTimeEesiAdapter._played_this_tick(tick) == [
+        ("item_1", 600),
+        ("item_2", 1000),
+    ]
+
+    tick.truncate_agent_audio("item_2", 1100, 1000, 1600)  # 100 ms = 800 bytes in
+    assert DiscreteTimeEesiAdapter._played_this_tick(tick) == [
+        ("item_1", 600),
+        ("item_2", 200),
+    ]
+
+
 def test_usage_is_labelled_eesi_and_billed_per_minute():
     adapter, _ = make_adapter()
     tick = make_tick()

@@ -231,6 +231,14 @@ class DiscreteTimeOpenAIAdapter(DiscreteTimeAdapter):
         for event in events:
             await self._process_event(result, event)
 
+    def _played_audio_ms(self, result: TickResult, item_id: str) -> int:
+        """The ``audio_end_ms`` sent with ``conversation.item.truncate``.
+
+        This tick's played audio, padded to a tick, as upstream sends it.
+        """
+        played = result.get_played_agent_audio()
+        return int(len(played) / self.audio_format.bytes_per_second * 1000)
+
     async def _process_event(self, result: TickResult, event: Any) -> None:
         """Process an OpenAI Realtime event."""
         result.events.append(event)
@@ -293,14 +301,10 @@ class DiscreteTimeOpenAIAdapter(DiscreteTimeAdapter):
 
                 # OpenAI-specific: tell server to truncate and cancel
                 if last_item_id is not None:
-                    played = result.get_played_agent_audio()
-                    audio_end_ms = int(
-                        len(played) / self.audio_format.bytes_per_second * 1000
-                    )
                     await self.provider.truncate_item(
                         item_id=last_item_id,
                         content_index=0,
-                        audio_end_ms=audio_end_ms,
+                        audio_end_ms=self._played_audio_ms(result, last_item_id),
                     )
 
         elif isinstance(event, SpeechStoppedEvent):

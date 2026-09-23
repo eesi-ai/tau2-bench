@@ -8,6 +8,9 @@ provider and two EESI-specific rules:
   does not truncate the agent's audio: the server keeps that reply playing.
 - EESI bills per connected minute, so token counts are informational and a
   session-audio meter carries the cost, as for xAI.
+- A truncate reports how much of the reply was played across every tick, not
+  one tick's worth: Nur keeps only the heard part of an interrupted reply in
+  its history, so a flat 200 ms would cut every interrupted reply to a word.
 """
 
 from typing import Any, List, Optional
@@ -29,6 +32,40 @@ class DiscreteTimeEesiAdapter(DiscreteTimeOpenAIAdapter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._session_counter = 0
+        # Bytes of each reply played in completed ticks.
+        self._played_bytes: dict[str, int] = {}
+
+    @staticmethod
+    def _played_this_tick(result: TickResult) -> list[tuple[str, int]]:
+        """(item_id, bytes) played this tick, stopping at an interruption."""
+        limit = len(result.agent_audio_data)
+        if result.was_truncated and result.interruption_audio_start_ms is not None:
+            into_tick_ms = (
+                result.interruption_audio_start_ms
+                - result.cumulative_user_audio_at_tick_start_ms
+            )
+            tick_ms = result.bytes_per_tick / result.bytes_per_second * 1000
+            into_tick_ms = max(0, min(into_tick_ms, tick_ms))
+            limit = int(into_tick_ms * result.bytes_per_second / 1000)
+        played, total = [], 0
+        for data, item_id in result.agent_audio_chunks:
+            take = min(len(data), max(0, limit - total))
+            total += take
+            if item_id and take:
+                played.append((item_id, take))
+        return played
+
+    def _played_audio_ms(self, result: TickResult, item_id: str) -> int:
+        heard = self._played_bytes.get(item_id, 0) + sum(
+            n for played, n in self._played_this_tick(result) if played == item_id
+        )
+        return int(heard / self.audio_format.bytes_per_second * 1000)
+
+    async def _async_run_tick(self, user_audio: bytes, tick_number: int) -> TickResult:
+        result = await super()._async_run_tick(user_audio, tick_number)
+        for item_id, n in self._played_this_tick(result):
+            self._played_bytes[item_id] = self._played_bytes.get(item_id, 0) + n
+        return result
 
     @property
     def provider(self) -> EesiRealtimeProvider:
@@ -48,6 +85,7 @@ class DiscreteTimeEesiAdapter(DiscreteTimeOpenAIAdapter):
     ) -> None:
         super().connect(system_prompt, tools, vad_config or EesiVADConfig(), modality)
         self._session_counter += 1
+        self._played_bytes.clear()
 
     def _make_audio_usage_record(self) -> Optional[UsageRecord]:
         """Cumulative session-audio meter, EESI's billing basis.
