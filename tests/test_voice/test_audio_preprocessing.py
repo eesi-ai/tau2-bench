@@ -234,3 +234,60 @@ class TestAudioMixing:
         samples = audio_data_to_numpy(result)
         assert np.all(samples >= -32768)
         assert np.all(samples <= 32767)
+
+
+def _tone(rms: float, seconds: float, rate: int = 16000, pad: float = 0.5):
+    import numpy as np
+
+    from tau2.data_model.audio import AudioEncoding
+    from tau2.voice.utils.audio_preprocessing import numpy_to_audio_data
+
+    t = np.arange(int(seconds * rate)) / rate
+    tone = np.sqrt(2) * rms * np.sin(2 * np.pi * 220 * t)
+    silence = np.zeros(int(pad * rate))
+    samples = np.concatenate([silence, tone, silence])
+    return numpy_to_audio_data(
+        samples,
+        encoding=AudioEncoding.PCM_S16LE,
+        sample_rate=rate,
+        channels=1,
+        dtype=np.int16,
+    )
+
+
+def _active_rms(audio) -> float:
+    import numpy as np
+
+    x = np.frombuffer(audio.data, dtype=np.int16).astype(np.float64)
+    return float(np.sqrt((x[np.abs(x) > 1] ** 2).mean()))
+
+
+def test_quiet_speech_is_raised_to_the_snr_reference_level():
+    """sage speaks at RMS ~530; noise is scaled against 3000, so unmatched it
+    turned a 15 dB SNR into -3 dB."""
+    import numpy as np
+
+    from tau2.voice.utils.audio_preprocessing import match_speech_reference_level
+    from tau2.voice_config import SNR_SPEECH_REFERENCE_RMS
+
+    matched = match_speech_reference_level(_tone(530.0, 2.0))
+    assert (
+        abs(_active_rms(matched) - SNR_SPEECH_REFERENCE_RMS) / SNR_SPEECH_REFERENCE_RMS
+        < 0.05
+    )
+    x = np.frombuffer(matched.data, dtype=np.int16)
+    assert not x[: 16000 // 4].any()  # leading silence stays silent and is not measured
+
+
+def test_level_matching_stops_short_of_clipping():
+    import numpy as np
+
+    from tau2.voice.utils.audio_preprocessing import match_speech_reference_level
+
+    # A single loud click next to quiet speech: the gain is peak-limited.
+    audio = _tone(300.0, 1.0)
+    x = np.frombuffer(audio.data, dtype=np.int16).copy()
+    x[20000] = 30000
+    audio.data = x.tobytes()
+    matched = match_speech_reference_level(audio)
+    assert np.abs(np.frombuffer(matched.data, dtype=np.int16)).max() <= 32000

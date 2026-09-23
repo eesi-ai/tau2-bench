@@ -441,6 +441,46 @@ def _snr_to_scale(snr_db: float, noise_rms: float) -> float:
     return (SNR_SPEECH_REFERENCE_RMS / noise_rms) * (10 ** (-snr_db / 20))
 
 
+#: 20 ms frames within this many dB of the loudest frame count as speech.
+_ACTIVE_FRAME_RANGE_DB = 30.0
+#: Peak ceiling for level matching, a hair under full scale.
+_LEVEL_MATCH_PEAK = 32000.0
+
+
+def match_speech_reference_level(audio: AudioData) -> AudioData:
+    """Scale speech so its active RMS is ``SNR_SPEECH_REFERENCE_RMS``.
+
+    Noise is mixed against that fixed reference, not against the speech it
+    lands on, so a voice quieter than the reference hears its noise louder
+    than the configured SNR. OpenAI's ``sage`` speaks at RMS ~530 against the
+    3000 reference: "15 dB" background talk came out at -3 dB and Nur heard
+    two of nine caller turns. Leading and trailing silence is left out of the
+    measurement; the gain stops where the peak would clip.
+    """
+    if not audio.format.is_pcm16 or audio.num_samples == 0:
+        return audio
+    samples = audio_data_to_numpy(audio, dtype=np.int16).astype(np.float64)
+    frame = max(1, audio.format.sample_rate // 50)
+    usable = len(samples) // frame * frame
+    if usable == 0:
+        return audio
+    frame_power = (samples[:usable].reshape(-1, frame) ** 2).mean(axis=1)
+    loudest = frame_power.max()
+    if loudest <= 0:
+        return audio
+    active = frame_power[frame_power >= loudest * 10 ** (-_ACTIVE_FRAME_RANGE_DB / 10)]
+    active_rms = float(np.sqrt(active.mean()))
+    peak = float(np.abs(samples).max())
+    gain = min(SNR_SPEECH_REFERENCE_RMS / active_rms, _LEVEL_MATCH_PEAK / peak)
+    return numpy_to_audio_data(
+        samples * gain,
+        encoding=AudioEncoding.PCM_S16LE,
+        sample_rate=audio.format.sample_rate,
+        channels=audio.format.channels,
+        dtype=np.int16,
+    )
+
+
 @dataclass
 class AudioTracks:
     """Individual audio tracks before mixing, stored as float64 for precision.
