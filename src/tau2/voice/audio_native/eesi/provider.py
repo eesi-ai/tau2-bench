@@ -69,9 +69,14 @@ class EesiRealtimeProvider(OpenAIRealtimeProvider):
         headers = {"Authorization": f"Bearer {self.api_key}"}
         self.ws = await websockets.connect(url, additional_headers=headers)
 
+        gateway_session_id = None
         async for raw in self.ws:
             data = json.loads(raw)
             event_type = data.get("type")
+            if event_type == "eesi.session":
+                # The gateway's id for this call: what its logs and the speech
+                # server's debug I/O log name the session by.
+                gateway_session_id = data.get("session_id")
             if event_type == "session.created":
                 break
             if event_type == "error":
@@ -83,7 +88,7 @@ class EesiRealtimeProvider(OpenAIRealtimeProvider):
         else:
             raise RuntimeError("EESI closed the socket before session.created")
 
-        self.session_id = data.get("session", {}).get("id")
+        self.session_id = data.get("session", {}).get("id") or gateway_session_id
         logger.info(f"EESI realtime: session created (session_id={self.session_id})")
 
     def _build_turn_detection_config(self, vad_config: Any) -> Dict:

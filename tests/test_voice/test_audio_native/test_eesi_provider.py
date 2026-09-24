@@ -111,6 +111,25 @@ def test_connect_reads_past_gateway_frames(monkeypatch):
     assert provider.is_connected
 
 
+def test_connect_names_the_session_by_the_gateway_id_when_the_server_gives_none(
+    monkeypatch,
+):
+    """Nur's session.created carries no session id; the gateway's eesi.session
+    does, and it is what the server's debug log names the call by."""
+    handshake = [
+        frame
+        if frame.get("type") != "session.created"
+        else {**frame, "session": {"type": "realtime"}}
+        for frame in HANDSHAKE
+    ]
+    connect_to(monkeypatch, handshake)
+    provider = EesiRealtimeProvider(api_key="k", base_url="https://api.eesi.ai/v1")
+
+    asyncio.run(provider.connect())
+
+    assert provider.session_id == "gw-1"
+
+
 def test_connect_surfaces_a_refusal(monkeypatch):
     connect_to(
         monkeypatch,
