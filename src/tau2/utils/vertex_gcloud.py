@@ -33,6 +33,14 @@ def _access_token() -> str:
         return _token
 
 
+def _invalidate_token(token: str) -> None:
+    global _token, _token_acquired_at
+    with _token_lock:
+        if _token == token:
+            _token = ""
+            _token_acquired_at = 0.0
+
+
 def _text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -96,12 +104,18 @@ def completion_with_gcloud(
         f"https://{host}/v1/projects/{project}/locations/{location}"
         f"/publishers/google/models/{model}:generateContent"
     )
-    response = httpx.post(
-        url,
-        json=body,
-        headers={"Authorization": f"Bearer {_access_token()}"},
-        timeout=120,
-    )
+    token = _access_token()
+    for attempt in range(2):
+        response = httpx.post(
+            url,
+            json=body,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=120,
+        )
+        if response.status_code != 401 or attempt:
+            break
+        _invalidate_token(token)
+        token = _access_token()
     response.raise_for_status()
     data = response.json()
     candidate = data["candidates"][0]
