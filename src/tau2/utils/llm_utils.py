@@ -406,13 +406,26 @@ def generate(
 
     start_time = time.perf_counter()
     try:
-        response = completion(
-            model=model,
-            messages=litellm_messages,
-            tools=tools_schema,
-            tool_choice=tool_choice,
-            **kwargs,
-        )
+        if model.startswith("vertex_gcloud/"):
+            from tau2.utils.vertex_gcloud import completion_with_gcloud
+
+            if tools_schema:
+                raise ValueError(
+                    "vertex_gcloud supports text conversations without tools"
+                )
+            response = completion_with_gcloud(
+                model=model.removeprefix("vertex_gcloud/"),
+                messages=litellm_messages,
+                **kwargs,
+            )
+        else:
+            response = completion(
+                model=model,
+                messages=litellm_messages,
+                tools=tools_schema,
+                tool_choice=tool_choice,
+                **kwargs,
+            )
     except Exception as e:
         logger.error(e)
         raise e

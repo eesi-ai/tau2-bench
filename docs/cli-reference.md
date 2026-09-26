@@ -105,6 +105,14 @@ tau2 run --domain retail --audio-native --audio-native-provider gemini \
 tau2 run --domain airline --audio-native --audio-native-provider eesi \
   --voice-synthesis-provider eesi --speech-complexity control --num-tasks 1
 
+# Vertex Gemini as the simulated voice user and hallucination reviewer.
+# The EESI provider still supplies the audio agent and user speech synthesis.
+# Requires an active `gcloud auth print-access-token` login and project access.
+GOOGLE_CLOUD_PROJECT=your-project GOOGLE_CLOUD_LOCATION=us-central1 tau2 run \
+  --domain airline --audio-native --audio-native-provider eesi \
+  --voice-synthesis-provider eesi --user-llm vertex_gcloud/gemini-2.5-flash \
+  --review-model vertex_gcloud/gemini-2.5-flash --num-tasks 10
+
 # OpenAI TTS for the user when there is no ElevenLabs key (OPENAI_API_KEY)
 tau2 run --domain airline --audio-native --audio-native-provider eesi \
   --voice-synthesis-provider openai --speech-complexity regular --num-tasks 1
