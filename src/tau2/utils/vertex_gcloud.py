@@ -78,11 +78,25 @@ def completion_with_gcloud(
             raise ValueError(f"vertex_gcloud does not support {role} messages")
     if not contents:
         raise ValueError("vertex_gcloud requires a user or assistant message")
+    if model.startswith("gemini-3.8-") and contents[-1]["role"] == "model":
+        # Tau can ask the simulated customer to continue after its own prior
+        # utterance. Gemini 3.8 does not accept a model turn as the final
+        # input, so make the continuation request explicit.
+        contents.append(
+            {
+                "role": "user",
+                "parts": [{"text": "Continue the conversation as instructed."}],
+            }
+        )
 
-    generation = {
-        "temperature": kwargs.get("temperature", 0.2),
-        "maxOutputTokens": kwargs.get("max_tokens") or 4096,
-    }
+    generation = {"maxOutputTokens": kwargs.get("max_tokens") or 4096}
+    if model.startswith("gemini-3.8-"):
+        # Gemini 3.8 rejects sampling knobs and requires an explicit thinking
+        # level. Keep the user's requested level independent of Tau's older
+        # temperature defaults.
+        generation["thinkingConfig"] = {"thinkingLevel": "LOW"}
+    else:
+        generation["temperature"] = kwargs.get("temperature", 0.2)
     response_format = kwargs.get("response_format") or {}
     if isinstance(response_format, dict) and response_format.get("type") in (
         "json_object",

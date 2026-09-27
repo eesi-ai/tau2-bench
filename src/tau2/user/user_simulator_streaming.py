@@ -250,6 +250,7 @@ class UserAudioStreamingState(
 def user_interruption_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    model: str = VOICE_USER_SIMULATOR_DECISION_MODEL,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should interrupt the agent while they're speaking.
@@ -293,7 +294,7 @@ def user_interruption_policy(
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=model,
             messages=decision_messages,
             call_name="interruption_decision",
         )
@@ -318,6 +319,7 @@ def user_interruption_policy(
 def user_backchannel_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    model: str = VOICE_USER_SIMULATOR_DECISION_MODEL,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should backchannel while the agent is speaking.
@@ -361,7 +363,7 @@ def user_backchannel_policy(
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=model,
             messages=decision_messages,
             call_name="backchannel_decision",
         )
@@ -885,7 +887,9 @@ class VoiceStreamingUserSimulator(
             def should_interrupt_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_interruption_policy(s, integration_ticks=integration_ticks)
+                return user_interruption_policy(
+                    s, integration_ticks=integration_ticks, model=self.llm
+                )
 
         # Backchannel callback is tied to the use_llm_backchannel config
         if self.use_llm_backchannel:
@@ -893,7 +897,9 @@ class VoiceStreamingUserSimulator(
             def should_backchannel_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_backchannel_policy(s, integration_ticks=integration_ticks)
+                return user_backchannel_policy(
+                    s, integration_ticks=integration_ticks, model=self.llm
+                )
 
         action, info = basic_turn_taking_policy(
             state,
