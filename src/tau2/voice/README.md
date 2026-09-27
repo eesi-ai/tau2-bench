@@ -136,6 +136,14 @@ tau2 run --domain airline --audio-native --audio-native-provider eesi \
   --voice-synthesis-provider eesi --speech-complexity control --num-tasks 1
 ```
 
+For a bounded Nur diagnostic using the active `gcloud` login and Gemini 3.8
+Flash on Vertex for the simulated user, interruption/backchannel decisions, and
+optional review, use `scripts/run_nur_vertex.sh`. Set `EESI_API_KEY`,
+`EESI_BASE_URL`, and `GOOGLE_CLOUD_PROJECT` first. The script defaults to one
+regular retail conversation with a 90-second simulation ceiling; CLI arguments
+appended to it can override the task selection and duration. This is an EESI
+diagnostic setup, not a leaderboard-comparable configuration.
+
 Each persona maps to an EESI built-in voice of the same gender (Orion, Nova, Atlas, Juniper), resolved by name because built-in ids differ between deployments. The built-ins are American or British, so `regular` keeps its noise and behaviour effects but not the personas' accents; set `TAU2_EESI_VOICE_<PERSONA_NAME_UPPER>` to an `ev_…` id or voice name (e.g. a clone) to supply one. `nur-tts-v1` has no audio tags: `[pause]` becomes an ellipsis and vocal tics are dropped. Results with EESI voices are not comparable to the official leaderboard.
 
 ### OpenAI TTS
